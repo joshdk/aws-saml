@@ -7,7 +7,11 @@
 package cmd
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
+	"jdk.sh/meta"
 )
 
 // Command returns a complete handler for the aws-saml cli.
@@ -25,5 +29,34 @@ func Command() *cobra.Command {
 		},
 	}
 
+	// Add a custom usage footer template.
+	cmd.SetUsageTemplate(cmd.UsageTemplate() + versionFmt(
+		"\nInfo:\n"+
+			"  https://github.com/joshdk/aws-saml\n",
+		"  %s (%s) built on %v\n",
+		meta.Version(), meta.ShortSHA(), meta.DateFormat(time.RFC3339),
+	))
+
+	// Set a custom version template.
+	cmd.SetVersionTemplate(versionFmt(
+		"homepage: https://github.com/joshdk/aws-saml\n"+
+			"author:   Josh Komoroske\n"+
+			"license:  MIT\n",
+		"version:  %s\n"+
+			"sha:      %s\n"+
+			"date:     %s\n",
+		meta.Version(), meta.ShortSHA(), meta.DateFormat(time.RFC3339),
+	))
+
 	return cmd
+}
+
+// versionFmt returns the given literal, as well as a formatted string if
+// version metadata is set.
+func versionFmt(literal, format string, a ...interface{}) string {
+	if meta.Version() == "" {
+		return literal
+	}
+
+	return literal + fmt.Sprintf(format, a...)
 }
