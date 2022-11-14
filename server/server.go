@@ -38,6 +38,9 @@ func Start(ctx context.Context, listen, url string) (string, func() (string, err
 
 	mux := http.NewServeMux()
 
+	// Serve frontend web app content.
+	mux.Handle("/", static)
+
 	// The /login route redirects the user to the IdP initiated login url.
 	mux.HandleFunc("/login", func(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, url, http.StatusTemporaryRedirect)
@@ -62,6 +65,8 @@ func Start(ctx context.Context, listen, url string) (string, func() (string, err
 			// Write the SAML response string to our channel.
 			responseChan <- request.FormValue("SAMLResponse")
 		}()
+
+		http.Redirect(writer, request, "/", http.StatusFound)
 	})
 
 	// The /callback route is called by the user to terminate this server.
