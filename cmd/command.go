@@ -7,9 +7,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/joshdk/aws-saml/server"
 	"github.com/spf13/cobra"
 	"jdk.sh/meta"
 )
@@ -55,7 +57,27 @@ func Command() *cobra.Command { //nolint:funlen
 		SilenceUsage:  true,
 		SilenceErrors: true,
 
-		RunE: func(*cobra.Command, []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Create a context that is cancelled after the given timeout.
+			ctx, cancel := context.WithTimeout(cmd.Context(), flags.timeout)
+			defer cancel()
+
+			// Start the local server which will handle the assertion callback
+			// from the SAML IdP.
+			loginURL, waitForSAMLResponse := server.Start(ctx, flags.listen, flags.idp)
+
+			// Print the login url to initiate the SAML login flow.
+			fmt.Println("Open your browser to:", loginURL) //nolint:forbidigo
+
+			// Wait for the user to complete the login flow.
+			samlResponse, err := waitForSAMLResponse()
+			if err != nil {
+				return err
+			}
+
+			// For now, just print the SAML response
+			fmt.Println(samlResponse) //nolint:forbidigo
+
 			return nil
 		},
 	}
