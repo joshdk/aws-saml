@@ -1,0 +1,61 @@
+project_name: aws-saml
+
+builds:
+  - id: aws-saml
+    binary: aws-saml
+
+    targets:
+      - darwin_amd64
+      - linux_amd64
+
+    flags:
+      - -buildvcs=false
+      - -trimpath
+
+    ldflags:
+      - -s -w
+      - -buildid=
+      - -X jdk.sh/meta.date={{ .Date }}
+      - -X jdk.sh/meta.sha={{ .Commit }}
+      - -X jdk.sh/meta.version={{ .Tag }}
+
+    env:
+      - CGO_ENABLED=0
+
+    hooks:
+      post:
+        - upx --best --ultra-brute "{{ .Path }}"
+
+  - id: aws-saml-m1
+    binary: aws-saml
+
+    targets:
+      - darwin_arm64
+
+    flags:
+      - -buildvcs=false
+      - -trimpath
+
+    ldflags:
+      - -s -w
+      - -buildid=
+      - -X jdk.sh/meta.date={{ .Date }}
+      - -X jdk.sh/meta.sha={{ .Commit }}
+      - -X jdk.sh/meta.version={{ .Tag }}
+
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: aws-saml
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+release:
+  name_template: "{{ .Tag }} Release"
+  prerelease: auto
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  skip: true
