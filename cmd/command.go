@@ -8,9 +8,15 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/joshdk/aws-saml/server"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -46,6 +52,15 @@ type flags struct {
 	userAgent string
 }
 
+// delete this type once https://github.com/aws/aws-sdk-go/pull/4621 merges.
+type credentialProcessResponse struct {
+	Version         int
+	AccessKeyID     string `json:"AccessKeyId"`
+	SecretAccessKey string
+	SessionToken    string
+	Expiration      *time.Time
+}
+
 // Command returns a complete handler for the aws-saml cli.
 func Command() *cobra.Command { //nolint:funlen
 	var flags flags
@@ -78,10 +93,44 @@ func Command() *cobra.Command { //nolint:funlen
 				return err
 			}
 
-			// For now, just print the SAML response
-			fmt.Println(samlResponse) //nolint:forbidigo
+			// Create a new default session.
+			sess, err := session.NewSession()
+			if err != nil {
+				return err
+			}
 
-			return nil
+			// Configure a new STS client.
+			client := sts.New(sess)
+			client.Handlers.Build.PushBack(request.WithSetRequestHeaders(map[string]string{"User-Agent": flags.userAgent}))
+
+			// Actually assume the given role with our SAML response.
+			input := sts.AssumeRoleWithSAMLInput{ //nolint:exhaustruct
+				DurationSeconds: aws.Int64(int64(flags.duration.Seconds())),
+				PrincipalArn:    aws.String(flags.principal),
+				RoleArn:         aws.String(flags.role),
+				SAMLAssertion:   aws.String(samlResponse),
+			}
+			result, err := client.AssumeRoleWithSAML(&input)
+			if err != nil {
+				return err
+			}
+
+			// Configure a credential process response with that the aws cli
+			// can consume our new credentials.
+			output := credentialProcessResponse{
+				Version:         1,
+				AccessKeyID:     aws.StringValue(result.Credentials.AccessKeyId),
+				SecretAccessKey: aws.StringValue(result.Credentials.SecretAccessKey),
+				SessionToken:    aws.StringValue(result.Credentials.SessionToken),
+				Expiration:      result.Credentials.Expiration,
+			}
+
+			// Marshal the credential process response to stdout so that the
+			// aws cli can read it.
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+
+			return enc.Encode(output)
 		},
 	}
 
