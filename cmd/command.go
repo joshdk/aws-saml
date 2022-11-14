@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joshdk/aws-saml/server"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"jdk.sh/meta"
 )
@@ -66,8 +67,10 @@ func Command() *cobra.Command { //nolint:funlen
 			// from the SAML IdP.
 			loginURL, waitForSAMLResponse := server.Start(ctx, flags.listen, flags.idp)
 
-			// Print the login url to initiate the SAML login flow.
-			fmt.Println("Open your browser to:", loginURL) //nolint:forbidigo
+			// Launch a browser to the login url to initiate the SAML login flow.
+			if err := browser.OpenURL(loginURL); err != nil {
+				return err
+			}
 
 			// Wait for the user to complete the login flow.
 			samlResponse, err := waitForSAMLResponse()
