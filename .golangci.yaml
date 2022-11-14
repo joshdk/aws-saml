@@ -22,6 +22,8 @@ linters:
     - wastedassign
 
     # Linters that are not used for this project.
+    - errorlint
+    - goerr113
     - gomnd
 
 linters-settings:
