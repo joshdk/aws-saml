@@ -25,6 +25,7 @@ linters:
     - errorlint
     - goerr113
     - gomnd
+    - tagliatelle
     - wrapcheck
 
 linters-settings:
