@@ -25,6 +25,7 @@ linters:
     - errorlint
     - goerr113
     - gomnd
+    - wrapcheck
 
 linters-settings:
   goheader:
