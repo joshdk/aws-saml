@@ -14,8 +14,39 @@ import (
 	"jdk.sh/meta"
 )
 
+type flags struct {
+	// duration is how long the role session should last before expiring.
+	duration time.Duration
+
+	// idp is the URL used to begin idp initiated login. A browser will be
+	// opened to this URL and the user will be prompted to login via the SAML
+	// IdP.
+	idp string
+
+	// listen is the local address to start an HTTP server on to listen for the
+	// SAML assertion POST. Once the SAML assertion is POSTed (or if the given
+	// timeout is exceeded) the server will shut down automatically.
+	listen string
+
+	// principal is the arn of the SAML provider in IAM that describes the IdP.
+	principal string
+
+	// role is the arn of the role that the caller is assuming.
+	role string
+
+	// timeout is how long to wait for SAML assertion redirect. If the user
+	// takes too long to login via the SAML IdP, then the command will
+	// automatically fail after this duration.
+	timeout time.Duration
+
+	// userAgent is the user agent to use when making API calls.
+	userAgent string
+}
+
 // Command returns a complete handler for the aws-saml cli.
-func Command() *cobra.Command {
+func Command() *cobra.Command { //nolint:funlen
+	var flags flags
+
 	cmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     "aws-saml",
 		Long:    "aws-saml - Generate AWS credentials from a SAML IdP login",
@@ -28,6 +59,45 @@ func Command() *cobra.Command {
 			return nil
 		},
 	}
+
+	// Define -d/--duration flag.
+	cmd.Flags().DurationVarP(&flags.duration, "duration", "d",
+		12*time.Hour,
+		"duration of the role session")
+
+	// Define -i/--idp flag.
+	cmd.Flags().StringVarP(&flags.idp, "idp", "i",
+		"",
+		"url to use for idp initiated login")
+	cmd.MarkFlagRequired("idp") //nolint
+
+	// Define -l/--listen flag.
+	cmd.Flags().StringVarP(&flags.listen, "listen", "l",
+		"",
+		"local address to listen for SAML assertion POST")
+	cmd.MarkFlagRequired("listen") //nolint
+
+	// Define -p/--principal flag.
+	cmd.Flags().StringVarP(&flags.principal, "principal", "p",
+		"",
+		"arn of the SAML provider in IAM that describes the IdP")
+	cmd.MarkFlagRequired("principal") //nolint
+
+	// Define -r/--role flag.
+	cmd.Flags().StringVarP(&flags.role, "role", "r",
+		"",
+		"arn of the role that the caller is assuming")
+	cmd.MarkFlagRequired("role") //nolint
+
+	// Define -t/--timeout flag.
+	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t",
+		5*time.Minute,
+		"duration to wait for SAML assertion")
+
+	// Define -A/--user-agent flag.
+	cmd.Flags().StringVarP(&flags.userAgent, "user-agent", "A",
+		versionFmt("joshdk/aws-saml", " %s (%s)", meta.Version(), meta.ShortSHA()),
+		"user agent to use for http requests")
 
 	// Add a custom usage footer template.
 	cmd.SetUsageTemplate(cmd.UsageTemplate() + versionFmt(
