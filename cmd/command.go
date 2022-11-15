@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/joshdk/aws-saml/awscache"
 	"github.com/joshdk/aws-saml/server"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -78,41 +79,58 @@ func Command() *cobra.Command { //nolint:funlen
 			ctx, cancel := context.WithTimeout(cmd.Context(), flags.timeout)
 			defer cancel()
 
-			// Start the local server which will handle the assertion callback
-			// from the SAML IdP.
-			loginURL, waitForSAMLResponse := server.Start(ctx, flags.listen, flags.idp)
-
-			// Launch a browser to the login url to initiate the SAML login flow.
-			if err := browser.OpenURL(loginURL); err != nil {
-				return err
+			// Attempt to load cached credentials so that we don't need to
+			// login to the SAML IdP repeatedly.
+			properties := map[string]string{
+				"idp":       flags.idp,
+				"principal": flags.principal,
+				"duration":  flags.duration.String(),
+				"role":      flags.role,
 			}
+			result := awscache.LoadAssumeRoleWithSAMLOutput("aws-saml", "common", properties)
 
-			// Wait for the user to complete the login flow.
-			samlResponse, err := waitForSAMLResponse()
-			if err != nil {
-				return err
-			}
+			// If no credentials were retrieved, then we need to go through the
+			// whole SAML IdP login flow.
+			if result == nil {
+				// Start the local server which will handle the assertion callback
+				// from the SAML IdP.
+				loginURL, waitForSAMLResponse := server.Start(ctx, flags.listen, flags.idp)
 
-			// Create a new default session.
-			sess, err := session.NewSession()
-			if err != nil {
-				return err
-			}
+				// Launch a browser to the login url to initiate the SAML login flow.
+				if err := browser.OpenURL(loginURL); err != nil {
+					return err
+				}
 
-			// Configure a new STS client.
-			client := sts.New(sess)
-			client.Handlers.Build.PushBack(request.WithSetRequestHeaders(map[string]string{"User-Agent": flags.userAgent}))
+				// Wait for the user to complete the login flow.
+				samlResponse, err := waitForSAMLResponse()
+				if err != nil {
+					return err
+				}
 
-			// Actually assume the given role with our SAML response.
-			input := sts.AssumeRoleWithSAMLInput{ //nolint:exhaustruct
-				DurationSeconds: aws.Int64(int64(flags.duration.Seconds())),
-				PrincipalArn:    aws.String(flags.principal),
-				RoleArn:         aws.String(flags.role),
-				SAMLAssertion:   aws.String(samlResponse),
-			}
-			result, err := client.AssumeRoleWithSAML(&input)
-			if err != nil {
-				return err
+				// Create a new default session.
+				sess, err := session.NewSession()
+				if err != nil {
+					return err
+				}
+
+				// Configure a new STS client.
+				client := sts.New(sess)
+				client.Handlers.Build.PushBack(request.WithSetRequestHeaders(map[string]string{"User-Agent": flags.userAgent}))
+
+				// Actually assume the given role with our SAML response.
+				input := sts.AssumeRoleWithSAMLInput{ //nolint:exhaustruct
+					DurationSeconds: aws.Int64(int64(flags.duration.Seconds())),
+					PrincipalArn:    aws.String(flags.principal),
+					RoleArn:         aws.String(flags.role),
+					SAMLAssertion:   aws.String(samlResponse),
+				}
+				result, err = client.AssumeRoleWithSAML(&input)
+				if err != nil {
+					return err
+				}
+
+				// Attempt to store credentials into the cache.
+				awscache.StoreAssumeRoleWithSAMLOutput("aws-saml", "common", properties, result)
 			}
 
 			// Configure a credential process response with that the aws cli
