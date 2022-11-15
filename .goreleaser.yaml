@@ -59,3 +59,28 @@ checksum:
 
 changelog:
   skip: true
+
+brews:
+  - name: aws-saml
+
+    tap:
+      owner: joshdk
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_GITHUB_TOKEN }}"
+
+    url_template: "https://github.com/joshdk/aws-saml/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    commit_msg_template: "feat: brew formula update for {{ .ProjectName }} {{ .Tag }}"
+    commit_author:
+      name: Josh Komoroske
+      email: jdkomo@gmail.com
+
+    folder: Formula
+
+    caveats: "Run aws-saml --help for usage"
+    homepage: "https://github.com/joshdk/aws-saml"
+    description: "Generate AWS credentials from a SAML IdP login"
+    license: "MIT"
+
+    test: |
+      system "#{bin}/aws-saml --version"
