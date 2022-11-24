@@ -18,7 +18,7 @@ import (
 // Start an HTTP server listening which guides the user through a SAML login.
 // Returns a function that must be invoked by the caller to wait for the SAML
 // response and the server to shutdown.
-func Start(ctx context.Context, listen, url string) (string, func() (string, error)) { //nolint:funlen
+func Start(ctx context.Context, listen, url string) (string, func() (string, error)) { //nolint:cyclop,funlen
 	// Channels for asynchronously communicating the SAML response string or
 	// any errors that are encountered.
 	responseChan := make(chan string)
@@ -39,7 +39,16 @@ func Start(ctx context.Context, listen, url string) (string, func() (string, err
 	mux := http.NewServeMux()
 
 	// Serve frontend web app content.
-	mux.Handle("/", static)
+	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		switch request.RequestURI {
+		case "/":
+			// If "/" is requested, then write the templated index.html bytes.
+			writer.Write(index) //nolint
+		default:
+			// Otherwise, serve the static content.
+			static.ServeHTTP(writer, request)
+		}
+	})
 
 	// The /login route redirects the user to the IdP initiated login url.
 	mux.HandleFunc("/login", func(writer http.ResponseWriter, request *http.Request) {
