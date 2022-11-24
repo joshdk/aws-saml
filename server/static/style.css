@@ -1,7 +1,90 @@
-html, body{
+* {
     margin: 0;
 }
 
-p {
-    text-align: center;
+html,
+body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.right {
+    float: right;
+    margin-left: 5px;
+}
+
+.left {
+    float: left;
+    margin-right: 5px;
+}
+
+header {
+    border-bottom: 1px solid #fff;
+    height: 60px;
+    min-height: 60px;
+    padding: 0 10px;
+
+    background-color: #16191f;
+    color: #eee;
+    font-family: Helvetica Neue, Roboto, Arial, sans-serif;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.8rem;
+}
+
+header span {
+    margin-top: 15px;
+}
+
+header a {
+    color: #d5dbdb;
+    text-decoration: none;
+}
+
+.content {
+    flex: 1 0 auto;
+    margin: 0 auto;
+    max-width: 600px;
+    padding: 10px;
+}
+
+.content div {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.content p {
+    font-family: Helvetica Neue, Roboto, Arial, sans-serif;
+    font-size: 20px;
+    line-height: 1.8rem;
+    padding-left: 10px;
+    vertical-align: center;
+}
+
+footer {
+    border-top: 1px solid #fff;
+    flex-shrink: 0;
+    height: 40px;
+    overflow-y: hidden;
+    padding: 0 10px;
+
+    background-color: #16191f;
+    color: #d5dbdb;
+    font-family: Helvetica Neue, Roboto, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.8rem;
+}
+
+footer span {
+    margin-top: 7px;
+}
+
+footer a {
+    color: #d5dbdb;
 }
