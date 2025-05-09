@@ -6,7 +6,6 @@
 package awscache
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -26,5 +25,5 @@ func cacheFilename(name string, properties map[string]string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s.json", prefix), nil
+	return prefix + ".json", nil
 }
