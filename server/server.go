@@ -19,10 +19,12 @@ import (
 // Returns a function that must be invoked by the caller to wait for the SAML
 // response and the server to shutdown.
 func Start(ctx context.Context, listen, url string) (string, func() (string, error)) { //nolint:cyclop,funlen
-	// Channels for asynchronously communicating the SAML response string or
-	// any errors that are encountered.
-	responseChan := make(chan string)
+	// Channels for asynchronously communicating any error that is encountered.
 	errChan := make(chan error)
+
+	// The SAML response body that is received by the callback handler and
+	// passed on to AWS.
+	var samlResponse string
 
 	// sendError is a helper function for sending errors to the error channel
 	// in a non-blocking fashion.
@@ -71,11 +73,30 @@ func Start(ctx context.Context, listen, url string) (string, func() (string, err
 		}
 
 		go func() {
-			// Write the SAML response string to our channel.
-			responseChan <- request.FormValue("SAMLResponse")
+			// Read the SAML response string.
+			samlResponse = request.FormValue("SAMLResponse")
 		}()
 
 		http.Redirect(writer, request, "/", http.StatusFound)
+	})
+
+	// The /response route serves the formatted SAML assertion.
+	mux.HandleFunc("/response", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		if len(samlResponse) == 0 {
+			http.NotFound(writer, request)
+
+			return
+		}
+
+		if err := formatSAMLResponse(samlResponse, writer); err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	// The /callback route is called by the user to terminate this server.
@@ -113,12 +134,6 @@ func Start(ctx context.Context, listen, url string) (string, func() (string, err
 	// SAML response of an error.
 	return fmt.Sprintf("http://%s/login", listen), func() (string, error) {
 		defer server.Shutdown(ctx) //nolint:errcheck
-
-		var samlResponse string
-		// Wait for the SAML response.
-		go func() {
-			samlResponse = <-responseChan
-		}()
 
 		// Wait for an error.
 		err := <-errChan

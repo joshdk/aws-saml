@@ -1,18 +1,14 @@
 "use strict";
 
-// ready calls the given function when the page is loaded and ready.
-function ready(fn) {
-    if (document.readyState !== 'loading') {
-        fn();
-    } else {
-        document.addEventListener('DOMContentLoaded', fn);
-    }
-}
-
-// shutdown sends a POST to the shutdown endpoint, signaling to the server to
-// terminate itself.
-function shutdown() {
-    fetch('/shutdown', {method: 'POST'});
-}
-
-ready(shutdown);
+window.addEventListener('load', () => {
+    fetch('/response')
+    .then(response => response.text()) // send response body to next then chain
+    .then(body => {
+        console.groupCollapsed("SAML Assertion");
+        console.log(body);
+        console.groupEnd();
+    })
+    .finally(() => {
+        fetch('/shutdown', {method: 'POST'});
+    });
+});
