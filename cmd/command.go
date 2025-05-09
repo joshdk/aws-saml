@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/processcreds"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -51,15 +52,6 @@ type flags struct {
 
 	// userAgent is the user agent to use when making API calls.
 	userAgent string
-}
-
-// delete this type once https://github.com/aws/aws-sdk-go/pull/4621 merges.
-type credentialProcessResponse struct {
-	Version         int
-	AccessKeyID     string `json:"AccessKeyId"`
-	SecretAccessKey string
-	SessionToken    string
-	Expiration      *time.Time
 }
 
 // Command returns a complete handler for the aws-saml cli.
@@ -135,7 +127,7 @@ func Command() *cobra.Command { //nolint:funlen
 
 			// Configure a credential process response with that the aws cli
 			// can consume our new credentials.
-			output := credentialProcessResponse{
+			output := processcreds.CredentialProcessResponse{
 				Version:         1,
 				AccessKeyID:     aws.StringValue(result.Credentials.AccessKeyId),
 				SecretAccessKey: aws.StringValue(result.Credentials.SecretAccessKey),
