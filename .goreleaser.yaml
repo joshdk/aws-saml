@@ -1,13 +1,13 @@
-project_name: aws-saml
+version: 2
 
 builds:
-  - id: aws-saml
-    binary: aws-saml
+  - goos:
+      - linux
+      - darwin
 
-    targets:
-      - darwin_amd64
-      - darwin_arm64
-      - linux_amd64
+    goarch:
+      - amd64
+      - arm64
 
     flags:
       - -buildvcs=false
@@ -24,7 +24,8 @@ builds:
       - CGO_ENABLED=0
 
 archives:
-  - id: aws-saml
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
 
 release:
@@ -35,12 +36,12 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
-  skip: true
+  disable: true
 
 brews:
   - name: aws-saml
 
-    tap:
+    repository:
       owner: joshdk
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_GITHUB_TOKEN }}"
@@ -52,7 +53,7 @@ brews:
       name: Josh Komoroske
       email: jdkomo@gmail.com
 
-    folder: Formula
+    directory: Formula
 
     caveats: "Run aws-saml --help for usage"
     homepage: "https://github.com/joshdk/aws-saml"
